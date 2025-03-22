@@ -2,139 +2,81 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stand Booking Queue</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f0f4f8;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .stand {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            width: 45%;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        input,
-        button {
-            padding: 10px;
-            margin: 5px 0;
-            width: 100%;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        li {
-            background: #e0f7fa;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Dynamic Stand Queue</title>
+  <style>
+    body { font-family: Arial; background: #f0f4f8; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    .container { max-width: 1200px; margin: auto; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; }
+    .stand { background: #fff; padding: 20px; border-radius: 12px; width: 45%; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; border-radius: 8px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background-color: #45a049; }
+    ul { list-style-type: none; padding: 0; }
+    li { background: #e0f7fa; padding: 10px; margin: 5px 0; border-radius: 8px; }
+  </style>
 </head>
 
 <body>
 
-    <h1>Stand Booking Queue System</h1>
+  <h1>Dynamic Stand Booking Queue</h1>
 
-    <div class="container">
-        <!-- Stand 1 -->
-        <div class="stand">
-            <h2>Stand 1</h2>
-            <input type="text" id="nameInput1" placeholder="Enter your name for Stand 1">
-            <button onclick="addToQueue(1)">Join Stand 1 Queue</button>
-            <button onclick="removeFromQueue(1)">Next (Remove First)</button>
-            <h3>Queue:</h3>
-            <ul id="queueList1"></ul>
-        </div>
-
-        <!-- Stand 2 -->
-        <div class="stand">
-            <h2>Stand 2</h2>
-            <input type="text" id="nameInput2" placeholder="Enter your name for Stand 2">
-            <button onclick="addToQueue(2)">Join Stand 2 Queue</button>
-            <button onclick="removeFromQueue(2)">Next (Remove First)</button>
-            <h3>Queue:</h3>
-            <ul id="queueList2"></ul>
-        </div>
+  <div class="container">
+    <div class="stand" id="stand1">
+      <h2>Stand 1</h2>
+      <input type="text" id="nameInput1" placeholder="Enter your name for Stand 1">
+      <button onclick="addToQueue(1)">Join Stand 1 Queue</button>
+      <button onclick="removeFromQueue(1)">Next (Remove First)</button>
+      <h3>Queue:</h3>
+      <ul id="queueList1"></ul>
     </div>
 
-    <script>
-        let queue1 = [];
-        let queue2 = [];
+    <div class="stand" id="stand2">
+      <h2>Stand 2</h2>
+      <input type="text" id="nameInput2" placeholder="Enter your name for Stand 2">
+      <button onclick="addToQueue(2)">Join Stand 2 Queue</button>
+      <button onclick="removeFromQueue(2)">Next (Remove First)</button>
+      <h3>Queue:</h3>
+      <ul id="queueList2"></ul>
+    </div>
+  </div>
 
-        function addToQueue(stand) {
-            const inputId = stand === 1 ? 'nameInput1' : 'nameInput2';
-            const queue = stand === 1 ? queue1 : queue2;
-            const name = document.getElementById(inputId).value.trim();
+  <script>
+    const apiUrl = 'http://localhost:3000';
 
-            if (name) {
-                queue.push(name);
-                document.getElementById(inputId).value = '';
-                updateQueue(stand);
-            } else {
-                alert('Please enter your name.');
-            }
-        }
+    async function fetchQueue(stand) {
+      const response = await fetch(`${apiUrl}/queue/${stand}`);
+      const data = await response.json();
+      const queueList = document.getElementById(`queueList${stand}`);
+      queueList.innerHTML = data.map((person, index) => `<li>${index + 1}. ${person.name}</li>`).join('');
+    }
 
-        function removeFromQueue(stand) {
-            const queue = stand === 1 ? queue1 : queue2;
+    async function addToQueue(stand) {
+      const nameInput = document.getElementById(`nameInput${stand}`);
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert('Please enter your name.');
+        return;
+      }
+      await fetch(`${apiUrl}/queue/${stand}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      nameInput.value = '';
+      fetchQueue(stand);
+    }
 
-            if (queue.length > 0) {
-                alert(`${queue[0]} has been removed from Stand ${stand} queue.`);
-                queue.shift();
-                updateQueue(stand);
-            } else {
-                alert(`Stand ${stand} queue is empty!`);
-            }
-        }
+    async function removeFromQueue(stand) {
+      await fetch(`${apiUrl}/queue/${stand}`, { method: 'DELETE' });
+      fetchQueue(stand);
+    }
 
-        function updateQueue(stand) {
-            const queue = stand === 1 ? queue1 : queue2;
-            const queueListId = stand === 1 ? 'queueList1' : 'queueList2';
-            const queueList = document.getElementById(queueListId);
-
-            queueList.innerHTML = '';
-            queue.forEach((person, index) => {
-                queueList.innerHTML += `<li>${index + 1}. ${person}</li>`;
-            });
-        }
-    </script>
+    // Initial Load
+    fetchQueue(1);
+    fetchQueue(2);
+    setInterval(() => { fetchQueue(1); fetchQueue(2); }, 5000); // Auto-refresh every 5 sec
+  </script>
 
 </body>
-
 </html>
